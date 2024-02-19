@@ -51,9 +51,9 @@ const SignUpForm = () => {
   const router = useRouter();
 
   const tipeKamarData: TipeKamarDataItem[] = [
-    { value: "standar", label: "Standar", harga: 500000 },
-    { value: "deluxe", label: "Deluxe", harga: 3000000 },
-    { value: "luxury", label: "Luxury", harga: 10000000 },
+    { value: "standar", label: "Standar", harga: 10000 },
+    { value: "deluxe", label: "Deluxe", harga: 100000 },
+    { value: "luxury", label: "Luxury", harga: 1000000 },
   ];
 
   const [hargaKamar, setHargaKamar] = useState(0);
@@ -64,42 +64,28 @@ const SignUpForm = () => {
       (item) => item.value === selectedValue
     );
 
-    try {
-      if (selectedTipeKamarData) {
-        const durasi = form.getValues("durasi");
-        const durasiNumber = parseInt(durasi);
+    if (selectedTipeKamarData) {
+      // Dapatkan nilai durasi, jika belum diisi, defaultkan ke 1
+      const durasi = parseInt(form.getValues("durasi") || "1");
 
-        // Set harga kamar
-        const hargaKamar = selectedTipeKamarData.harga;
-        form.setValue("harga", hargaKamar.toString()); // Set nilai harga di form
-        // Update state harga kamar untuk ditampilkan di UI
+      // Dapatkan harga kamar
+      const hargaKamar = selectedTipeKamarData.harga;
 
-        let totalHarga = 0;
+      // Harga awal sebelum diskon dan biaya sarapan
+      let hargaAwal = hargaKamar * durasi;
+      let biayaSarapan = form.getValues("isBreakfast") ? 80000 * durasi : 0;
 
-        // Harga awal sebelum diskon
-        const hargaAwal = hargaKamar * durasiNumber;
-
-        if (durasiNumber > 3) {
-          // Diskon 10% jika durasi lebih dari 3 hari
-          totalHarga = hargaAwal * 0.9;
-        } else {
-          totalHarga = hargaAwal;
-        }
-
-        // Biaya tambahan sarapan jika dipilih
-        const isBreakfast = form.getValues("isBreakfast");
-        const biayaSarapan = isBreakfast ? 80000 * durasiNumber : 0;
-
-        // Tambahkan biaya sarapan ke total harga
-        totalHarga += biayaSarapan;
-
-        // Set nilai form total harga
-        form.setValue("totalHarga", totalHarga.toString());
-
-        return totalHarga;
+      // Diskon 10% jika durasi lebih dari 3 hari
+      if (durasi > 3) {
+        hargaAwal *= 0.9;
       }
-    } catch (error) {
-      console.log(error);
+
+      // Total harga termasuk diskon dan biaya sarapan
+      const totalHarga = hargaAwal + biayaSarapan;
+
+      // Set nilai form total harga
+      form.setValue("totalHarga", totalHarga.toString());
+      setTotalHarga(totalHarga);
     }
   };
 
@@ -120,9 +106,13 @@ const SignUpForm = () => {
   });
   const { mutateAsync: createCustomer, error: errorCreate } = useCreateUser();
 
+  const handleTotalBayar = () => {
+    const tipeKamar = form.getValues("tipeKamar");
+    handleTipeKamarChange(tipeKamar);
+  }
+  
   async function onSubmit(values: z.infer<typeof UserSchema>) {
     try {
-      handleTipeKamarChange(form.getValues("tipeKamar"));
       console.log(values);
 
       toast.success("Success Create Customer");
@@ -138,10 +128,10 @@ const SignUpForm = () => {
           control={form.control}
           name="nama"
           render={({ field }) => (
-            <FormItem className="flex items-center">
-              <FormLabel>Name Pemesan</FormLabel>
+            <FormItem className="flex items-center gap-x-2 text-center">
+              <FormLabel className="">Name Pemesan</FormLabel>
               <FormControl>
-                <Input placeholder="Name" {...field} />
+                <Input placeholder="Name" {...field} className="w-72" />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -198,7 +188,6 @@ const SignUpForm = () => {
               <Select
                 onValueChange={(value) => {
                   field.onChange(value);
-                  handleTipeKamarChange(value);
                 }}
               >
                 <FormControl>
@@ -279,12 +268,12 @@ const SignUpForm = () => {
           control={form.control}
           name="durasi"
           render={({ field }) => (
-            <FormItem>
+            <FormItem className="flex items-center gap-x-8">
               <FormLabel>Durasi</FormLabel>
               <FormControl>
-                <Input type="number" {...field} />
+                <Input type="number" {...field} className="w-full" />
               </FormControl>
-              <FormLabel></FormLabel>
+              <FormLabel>Hari</FormLabel>
               <FormMessage />
             </FormItem>
           )}
@@ -309,17 +298,23 @@ const SignUpForm = () => {
           control={form.control}
           name="totalHarga"
           render={() => (
-            <FormItem>
+            <FormItem className="flex items-center">
               <FormLabel>Total Harga</FormLabel>
               <FormControl>
-                <Input value={totalHarga} disabled />
+                <Input
+                  value={totalHarga.toString()}
+                  disabled
+                  className="w-72"
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
-        <div className="mx-auto items-center text-center">
+        <div className="flex mx-auto items-center text-center gap-x-8">
+          <Button type="submit">Hitung Total Bayar</Button>
           <Button type="submit">Register</Button>
+          <Button onClick={() => window.location.reload()}>Cancel</Button>
         </div>
       </form>
     </Form>
