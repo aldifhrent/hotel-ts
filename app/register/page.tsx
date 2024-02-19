@@ -8,7 +8,7 @@ const RegisterPage = () => {
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl text-center">Form Pemesanan</CardTitle>
         </CardHeader>
-        <CardContent className="">
+        <CardContent>
           <SignUpForm />
         </CardContent>
       </div>

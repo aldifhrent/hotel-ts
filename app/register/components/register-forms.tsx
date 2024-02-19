@@ -56,58 +56,79 @@ const SignUpForm = () => {
     { value: "luxury", label: "Luxury", harga: 10000000 },
   ];
 
-  const [selectedTipeKamar, setSelectedTipeKamar] = useState("");
   const [hargaKamar, setHargaKamar] = useState(0);
   const [totalHarga, setTotalHarga] = useState(0);
-  const [date, setDate] = React.useState<Date>();
-  const handleTipeKamarChange = (
-    selectedValue: React.SetStateAction<string>
-  ) => {
+
+  const handleTipeKamarChange = (selectedValue: string) => {
     const selectedTipeKamarData = tipeKamarData.find(
       (item) => item.value === selectedValue
     );
-    setSelectedTipeKamar(selectedValue);
-    setHargaKamar(selectedTipeKamarData ? selectedTipeKamarData.harga : 0);
-    form.setValue(
-      "harga",
-      selectedTipeKamarData ? selectedTipeKamarData.harga : 0
-    );
 
-    let hargaSetelahDiskon = selectedTipeKamarData
-      ? selectedTipeKamarData.harga
-      : 0;
-    const durasiNumber = parseInt(form.getValues("durasi"));
-    const totalHargaKamar = hargaSetelahDiskon * durasiNumber;
-    if (durasiNumber > 3) {
-      hargaSetelahDiskon *= 0.9; // Diskon 10%
+    try {
+      if (selectedTipeKamarData) {
+        const durasi = form.getValues("durasi");
+        const durasiNumber = parseInt(durasi);
+
+        // Set harga kamar
+        const hargaKamar = selectedTipeKamarData.harga;
+        form.setValue("harga", hargaKamar.toString()); // Set nilai harga di form
+        // Update state harga kamar untuk ditampilkan di UI
+
+        let totalHarga = 0;
+
+        // Harga awal sebelum diskon
+        const hargaAwal = hargaKamar * durasiNumber;
+
+        if (durasiNumber > 3) {
+          // Diskon 10% jika durasi lebih dari 3 hari
+          totalHarga = hargaAwal * 0.9;
+        } else {
+          totalHarga = hargaAwal;
+        }
+
+        // Biaya tambahan sarapan jika dipilih
+        const isBreakfast = form.getValues("isBreakfast");
+        const biayaSarapan = isBreakfast ? 80000 * durasiNumber : 0;
+
+        // Tambahkan biaya sarapan ke total harga
+        totalHarga += biayaSarapan;
+
+        // Set nilai form total harga
+        form.setValue("totalHarga", totalHarga.toString());
+
+        return totalHarga;
+      }
+    } catch (error) {
+      console.log(error);
     }
-    const isBreakfast = form.getValues("isBreakfast");
-    const biayaSarapan = isBreakfast ? 80000 * durasiNumber : 0;
-
-    // Hitung total harga yang harus dibayar
-    const totalHarga = totalHargaKamar + biayaSarapan;
-    setHargaKamar(hargaSetelahDiskon);
-    form.setValue("harga", hargaSetelahDiskon);
-    form.setValue("totalHarga", totalHarga.toString());
   };
+
   const form = useForm({
     resolver: zodResolver(UserSchema),
     defaultValues: {
-      name: "",
+      nama: "",
       jenisKelamin: "",
       nomorKtp: "",
       tipeKamar: "",
       harga: 0,
-      tanggalPesan: date ? date.format("YYYY-MM-DD") : "",
+      tanggalPesan: new Date(),
       durasi: "",
+      diskon: 0,
       isBreakfast: false,
       totalHarga: "",
     },
   });
-  const { mutateAsync: createCustomer, isError } = useCreateUser();
+  const { mutateAsync: createCustomer, error: errorCreate } = useCreateUser();
 
   async function onSubmit(values: z.infer<typeof UserSchema>) {
-    console.log(values);
+    try {
+      handleTipeKamarChange(form.getValues("tipeKamar"));
+      console.log(values);
+
+      toast.success("Success Create Customer");
+    } catch (error) {
+      console.log(error);
+    }
   }
 
   return (
@@ -115,7 +136,7 @@ const SignUpForm = () => {
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <FormField
           control={form.control}
-          name="name"
+          name="nama"
           render={({ field }) => (
             <FormItem className="flex items-center">
               <FormLabel>Name Pemesan</FormLabel>
@@ -133,14 +154,17 @@ const SignUpForm = () => {
             <FormItem className="flex gap-x-2">
               <FormLabel>Jenis Kelamin</FormLabel>
               <FormControl className="flex items-center justify-center">
-                <RadioGroup>
+                <RadioGroup
+                  onValueChange={field.onChange}
+                  defaultValue={field.value}
+                >
                   <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="Laki-laki" />
-                    <Label>Laki-laki</Label>
+                    <RadioGroupItem value="Laki-laki" id="jenis-laki" />
+                    <Label htmlFor="jenis-laki">Laki-laki</Label>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="Perempuan" />
-                    <Label>Perempuan</Label>
+                    <RadioGroupItem value="Perempuan" id="jenis-perempuan" />
+                    <Label htmlFor="jenis-perempuan">Perempuan</Label>
                   </div>
                 </RadioGroup>
               </FormControl>
@@ -176,7 +200,6 @@ const SignUpForm = () => {
                   field.onChange(value);
                   handleTipeKamarChange(value);
                 }}
-                value={selectedTipeKamar}
               >
                 <FormControl>
                   <SelectTrigger className="w-full">
@@ -202,10 +225,10 @@ const SignUpForm = () => {
           control={form.control}
           name="harga"
           render={({ field }) => (
-            <FormItem>
+            <FormItem className="flex gap-x-2 items-center">
               <FormLabel>Harga</FormLabel>
               <FormControl>
-                <Input type="number" value={hargaKamar} disabled />
+                <Input type="number" value={hargaKamar.toString()} disabled />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -215,27 +238,34 @@ const SignUpForm = () => {
           control={form.control}
           name="tanggalPesan"
           render={({ field }) => (
-            <FormItem>
+            <FormItem className="flex gap-x-2 items-center">
               <FormLabel>Tanggal Pesan</FormLabel>
               <FormControl>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button
-                      variant={"outline"}
-                      className={cn(
-                        "w-[280px] justify-start text-left font-normal",
-                        !date && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {date ? format(date, "PPP") : <span>Pick a date</span>}
-                    </Button>
+                    <FormControl>
+                      <Button
+                        variant={"outline"}
+                        className={cn(
+                          "w-[240px] pl-3 text-left font-normal",
+                          !field.value && "text-muted-foreground"
+                        )}
+                      >
+                        {field.value ? (
+                          format(field.value, "PPP")
+                        ) : (
+                          <span>Pick a date</span>
+                        )}
+                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                      </Button>
+                    </FormControl>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
+                  <PopoverContent className="w-auto p-0" align="start">
                     <Calendar
                       mode="single"
-                      selected={date}
-                      onSelect={setDate}
+                      selected={field.value}
+                      onSelect={field.onChange}
+                      disabled={(date) => date < new Date("1900-01-01")}
                       initialFocus
                     />
                   </PopoverContent>
@@ -249,12 +279,12 @@ const SignUpForm = () => {
           control={form.control}
           name="durasi"
           render={({ field }) => (
-            <FormItem className="flex items-center gap-x-1">
-              <FormLabel>Durasi Menginap</FormLabel>
+            <FormItem>
+              <FormLabel>Durasi</FormLabel>
               <FormControl>
-                <Input type="number" />
+                <Input type="number" {...field} />
               </FormControl>
-              <FormLabel>Hari</FormLabel>
+              <FormLabel></FormLabel>
               <FormMessage />
             </FormItem>
           )}
@@ -262,11 +292,14 @@ const SignUpForm = () => {
         <FormField
           control={form.control}
           name="isBreakfast"
-          render={() => (
+          render={({ field }) => (
             <FormItem className="flex items-center gap-x-4">
               <FormLabel>Termasuk Breakfast</FormLabel>
               <FormControl>
-                <Checkbox />
+                <Checkbox
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -279,7 +312,7 @@ const SignUpForm = () => {
             <FormItem>
               <FormLabel>Total Harga</FormLabel>
               <FormControl>
-                <Input value={totalHarga.toString()} disabled />
+                <Input value={totalHarga} disabled />
               </FormControl>
               <FormMessage />
             </FormItem>

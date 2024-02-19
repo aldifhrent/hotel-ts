@@ -11,17 +11,18 @@ datasource db {
 }
 
 model User {
-  id            String   @unique @default(uuid())
-  no            Int      @id @default(autoincrement())
-  nama          String
-  jenisKelamin  String
-  nomorKtp      String
-  tipeKamar     String
-  harga         Decimal
+  id           String   @unique @default(uuid())
+  no           Int      @id @default(autoincrement())
+  nama         String
+  jenisKelamin String
+  nomorKtp     String
+  tipeKamar    String
+  harga        Decimal
   tanggalPesan DateTime
-  durasi        Int
-  isBreakfast   Boolean
-  totalHarga    Decimal
-  createAt      DateTime @default(now())
-  updateAt      DateTime @updatedAt
+  durasi       Int
+  diskon       String
+  isBreakfast  Boolean
+  totalHarga   Decimal
+  createAt     DateTime @default(now())
+  updateAt     DateTime @updatedAt
 }

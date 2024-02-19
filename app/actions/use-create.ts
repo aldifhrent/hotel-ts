@@ -7,9 +7,9 @@ import { toast } from "sonner";
 
 export const useCreateUser = () => {
   return useMutation({
-    mutationFn: async (body: any) => {
+    mutationFn: async (body) => {
       const response: AxiosResponse<User> = await axiosInstance.post(
-        `/api/beasiswa`,
+        `/api/customers`,
         body,
       );
       return response.data;
